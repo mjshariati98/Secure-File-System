@@ -10,7 +10,6 @@ import server.api
 
 SERVER_PUB_KEY_PATH = "../server/pub.key"  # It should be in the client side but we do this to be simpler.
 
-
 def main():
     server_pub_key = client_utils.load_server_pub_key(SERVER_PUB_KEY_PATH)
 
@@ -83,7 +82,7 @@ def handle_sign_up(server_pub_key):
         print(err)
         return None
 
-    client.current_path = "/" + client.username
+    client.current_path = "~"
     return client
 
 
@@ -113,8 +112,6 @@ def handle_generate_key_pair():
 def handle_client_commands(client):
     while True:
         current_path = client.current_path
-        if current_path == "/" + client.username:
-            current_path = "~"
         user_command = input(client.username + ":" + current_path + "$ ")
         command = user_command.split(" ")[0]
 
@@ -122,7 +119,7 @@ def handle_client_commands(client):
             raise SystemExit
         elif command == "mkdir":
             if len(user_command.split(" ")) != 2:
-                print("command ls gets only 1 argument")
+                print("command mkdir gets only 1 argument")
                 continue
 
             path = user_command.split(" ")[1]
@@ -139,7 +136,22 @@ def handle_client_commands(client):
         elif command == "cd":
             pass  # TODO
         elif command == "ls":
-            pass  # TODO
+            if len(user_command.split(" ")) > 2:
+                print("command ls gets more than two arguments")
+                continue
+            path = "."
+            if len(user_command.split(" ")) == 2:
+                path = user_command.split(" ")[1]
+            if not path.startswith("/"):
+                path = os.path.join(client.current_path, path)
+            final_command = "ls " + path
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+            else:
+                print(response)
         elif command == "rm":
             pass  # TODO
         elif command == "mv":

@@ -1,7 +1,9 @@
 import os
 import sqlite3
+import json
 
 import server_utils
+from file_tree import default_file_tree, create_directory, locate_path
 
 DIR_NAME = os.path.dirname(__file__)
 DB_PATH = os.path.join(DIR_NAME, "server.db")
@@ -34,7 +36,11 @@ def generate_keys():
 def create_db_tables():
     # users table
     exec_db_command("""CREATE TABLE IF NOT EXISTS users (
-    username varchar(256) NOT NULL, hashed_password text NOT NULL, pub_key text NOT NULL, session_key text, PRIMARY KEY (username)
+    username varchar(256) NOT NULL,
+    hashed_password text NOT NULL,
+    pub_key text NOT NULL,
+    file_tree text,
+    session_key text, PRIMARY KEY (username)
     )""")
 
 
@@ -56,26 +62,24 @@ def sign_up(username, encrypted_password, nonce, tag, password_signature, encryp
 
         add_user_to_db(username, hashed_password, server_utils.export_key(user_pub_key))
         set_session_key(username, session_key)
-        create_user_home_dir(username)
         return True, None
     except Exception as err:
         return False, err
 
 
 def add_user_to_db(username, password, user_pub_key):
-    exec_db_command("INSERT INTO users (username, hashed_password, pub_key) VALUES (:username, :password, :pub_key)",
-                    {"username": username, "password": password, "pub_key": user_pub_key})
+    exec_db_command("INSERT INTO users (username, hashed_password, pub_key, file_tree) VALUES (:username, :password, :pub_key, :file_tree)",
+                    {
+                        "username": username,
+                        "password": password,
+                        "pub_key": user_pub_key,
+                        "file_tree": json.dumps(default_file_tree()),
+                    })
 
 
 def set_session_key(username, session_key):
     exec_db_command("UPDATE users SET session_key = :session_key WHERE username=:username",
                     {"username": username, "session_key": session_key})
-
-
-def create_user_home_dir(username):
-    home_dir_path = server_utils.home_dir_path(username, DATA_PATH)
-    if not os.path.exists(home_dir_path):
-        os.mkdir(home_dir_path)
 
 
 def exec_user_command(username, encrypted_command, nonce, tag):
@@ -89,9 +93,10 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     if command == "mkdir":  # TODO hash addresses
         try:
             path = user_command.split(" ")[1]
-            new_dir_path = os.path.join(DATA_PATH, path[1:])
+            file_tree = get_user_file_tree(username)
             # TODO check permission
-            os.makedirs(new_dir_path, exist_ok=True)
+            create_directory(file_tree, path)
+            store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
             return "An error occurred while creating new directory", err
@@ -100,7 +105,14 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     elif command == "cd":
         pass  # TODO
     elif command == "ls":
-        pass  # TODO
+        try:
+            path = user_command.split(" ")[1]
+            file_tree = get_user_file_tree(username)
+            # TODO check permission
+            ft = locate_path(file_tree, path)
+            return " ".join([x['name'] for x in ft['files']]), None
+        except Exception as err:
+            return "An error occurred while ls", err    
     elif command == "rm":
         pass  # TODO
     elif command == "mv":
@@ -142,6 +154,14 @@ def get_user_session_key(username):
                                           {"username": username})
     return results[0][0]
 
+def get_user_file_tree(username):
+    results = exec_db_command_with_result("SELECT file_tree FROM users WHERE username=:username",
+                                          {"username": username})
+    return json.loads(results[0][0])
+
+def store_user_file_tree(username, file_tree):
+    exec_db_command_with_result("UPDATE users SET file_tree=:file_tree WHERE username=:username",
+                                          {"username": username, "file_tree": json.dumps(file_tree)})
 
 if __name__ == '__main__':
     initialize()
