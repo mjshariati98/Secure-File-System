@@ -133,9 +133,11 @@ def db_connection():
 
 def exec_db_command(*args):
     db_conn, db_cursor = db_connection()
-    db_cursor.execute(*args)
-    db_conn.commit()
-    db_conn.close()
+    try:
+        db_cursor.execute(*args)
+    finally:
+        db_conn.commit()
+        db_conn.close()
 
 
 def exec_db_command_with_result(*args):

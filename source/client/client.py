@@ -29,7 +29,7 @@ def main():
             valid_input = True
         elif user_input == '2':
             client = handle_sign_up(server_pub_key)
-            if client is not None:  # TODO in None situation, database is get locked! (sqlite3.OperationalError: database is locked)
+            if client is not None:
                 valid_input = True
         else:
             print("Invalid input. Try again...")
