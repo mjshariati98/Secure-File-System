@@ -10,6 +10,7 @@ import server.api
 
 SERVER_PUB_KEY_PATH = "../server/pub.key"  # It should be in the client side but we do this to be simpler.
 
+
 def main():
     server_pub_key = client_utils.load_server_pub_key(SERVER_PUB_KEY_PATH)
 
@@ -25,8 +26,9 @@ def main():
         if user_input == 'exit':
             raise SystemExit
         elif user_input == '1':
-            handle_sign_in()
-            valid_input = True
+            client = handle_sign_in(server_pub_key)
+            if client is not None:
+                valid_input = True
         elif user_input == '2':
             client = handle_sign_up(server_pub_key)
             if client is not None:
@@ -37,8 +39,30 @@ def main():
     handle_client_commands(client)
 
 
-def handle_sign_in():
-    pass  # TODO
+def handle_sign_in(server_pub_key):
+    username = input("Enter your username: ")
+    password = input("Enter your password: ")
+
+    # Generate session key and encrypt password with it
+    session_key = client_utils.generate_session_key()
+    encrypted_password, nonce, tag = client_utils.symmetric_encrypt(session_key, password)
+
+    # Encrypt session key with server public key
+    encrypted_session_key = client_utils.asymmetric_encrypt(server_pub_key, session_key)
+
+    msg, err = server.api.sign_in_user(username, encrypted_password, nonce, tag, encrypted_session_key)
+    print(msg)
+    if err is not None:
+        print(err)
+        return None
+
+    client_keys = handle_load_key_pair()  # TODO Do not check that the key belongs to the user
+    client = Client(client_keys)
+    client.username = username
+    client.session_key = session_key
+    client.current_path = "~"
+
+    return client
 
 
 def handle_sign_up(server_pub_key):

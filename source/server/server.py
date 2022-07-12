@@ -67,6 +67,30 @@ def sign_up(username, encrypted_password, nonce, tag, password_signature, encryp
         return False, err
 
 
+def sign_in(username, encrypted_password, nonce, tag, encrypted_session_key):
+    try:
+        server_prv_key = server_utils.load_key(PRV_KEY_PATH)
+
+        session_key = server_utils.asymmetric_decrypt(server_prv_key, encrypted_session_key)
+
+        password = server_utils.symmetric_decrypt(session_key, nonce, tag, encrypted_password)
+        if password is None:
+            print("Not verified by session key tag")  # TODO
+
+        try:
+            user_hashed_password = get_user_hashed_password(username)
+        except IndexError:  # no such user in database
+            return False, "Invalid credentials"
+
+        if user_hashed_password != server_utils.get_hash(password):
+            return False, "Invalid credentials"
+
+        set_session_key(username, session_key)
+        return True, None
+    except Exception as err:
+        return False, err
+
+
 def add_user_to_db(username, password, user_pub_key):
     exec_db_command("INSERT INTO users (username, hashed_password, pub_key, file_tree) VALUES (:username, :password, :pub_key, :file_tree)",
                     {
@@ -112,7 +136,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             ft = locate_path(file_tree, path)
             return " ".join([x['name'] for x in ft['files']]), None
         except Exception as err:
-            return "An error occurred while ls", err    
+            return "An error occurred while ls", err
     elif command == "rm":
         pass  # TODO
     elif command == "mv":
@@ -151,19 +175,28 @@ def exec_db_command_with_result(*args):
     return results
 
 
+def get_user_hashed_password(username):
+    results = exec_db_command_with_result("SELECT hashed_password FROM users WHERE username=:username",
+                                          {"username": username})
+    return results[0][0]
+
+
 def get_user_session_key(username):
     results = exec_db_command_with_result("SELECT session_key FROM users WHERE username=:username",
                                           {"username": username})
     return results[0][0]
+
 
 def get_user_file_tree(username):
     results = exec_db_command_with_result("SELECT file_tree FROM users WHERE username=:username",
                                           {"username": username})
     return json.loads(results[0][0])
 
+
 def store_user_file_tree(username, file_tree):
     exec_db_command_with_result("UPDATE users SET file_tree=:file_tree WHERE username=:username",
-                                          {"username": username, "file_tree": json.dumps(file_tree)})
+                                {"username": username, "file_tree": json.dumps(file_tree)})
+
 
 if __name__ == '__main__':
     initialize()
