@@ -127,6 +127,16 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while creating new directory", err
     elif command == "touch":
         pass  # TODO
+    elif command == "get":
+        try:
+            path = user_command.split(" ")[1]
+            file_tree = get_user_file_tree(username)
+            # TODO check permission
+            ft = locate_path(file_tree, path)
+            print(ft)
+            return Path(os.path.join(DATA_PATH, ft['content'])).read_text(), None
+        except Exception as err:
+            return "An error occurred while ls", err
     elif command == "set":
         try:
             path = user_command.split(" ")[1]
@@ -136,7 +146,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             file_to_write = Path(os.path.join(DATA_PATH, fname))
             file_to_write.write_text(value)
             # TODO check permission
-            set_file_content(file_tree, path, "")
+            set_file_content(file_tree, path, fname)
             store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:

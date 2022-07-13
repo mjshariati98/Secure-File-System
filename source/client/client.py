@@ -5,6 +5,7 @@ sys.path.append("..")
 sys.path.append("../server")
 
 import client_utils
+from vim import edit_file_in_vim
 
 import server.api
 
@@ -146,6 +147,16 @@ def write_file(client, path, value):
         print(response)
         print(err)
 
+def read_file(client, path):
+    final_command = f"get {path}"
+    encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+    response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+    if err is not None:
+        print(response)
+        print(err)
+        return None
+    return response
+
 def handle_client_commands(client):
     while True:
         current_path = client.current_path
@@ -197,6 +208,11 @@ def handle_client_commands(client):
             pass  # TODO
         elif command == "revoke":
             pass  # TODO
+        elif command == "vim":
+            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
+            val = read_file(client, path)
+            if val is not None:
+                write_file(client, path, edit_file_in_vim(val))
         else:
             print("command " + command + " not found")
 
