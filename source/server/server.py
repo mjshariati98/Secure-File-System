@@ -1,9 +1,10 @@
 import os
 import sqlite3
 import json
+from pathlib import Path
 
 import server_utils
-from file_tree import default_file_tree, create_directory, locate_path
+from file_tree import default_file_tree, create_directory, locate_path, set_file_content
 
 DIR_NAME = os.path.dirname(__file__)
 DB_PATH = os.path.join(DIR_NAME, "server.db")
@@ -126,6 +127,20 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while creating new directory", err
     elif command == "touch":
         pass  # TODO
+    elif command == "set":
+        try:
+            path = user_command.split(" ")[1]
+            value = " ".join(user_command.split(" ")[2:])
+            file_tree = get_user_file_tree(username)
+            fname = os.urandom(40).hex()
+            file_to_write = Path(os.path.join(DATA_PATH, fname))
+            file_to_write.write_text(value)
+            # TODO check permission
+            set_file_content(file_tree, path, "")
+            store_user_file_tree(username, file_tree)
+            return None, None
+        except Exception as err:
+            return "An error occurred while setting text of the file", err    
     elif command == "cd":
         pass  # TODO
     elif command == "ls":

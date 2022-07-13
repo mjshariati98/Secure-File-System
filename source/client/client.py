@@ -132,6 +132,19 @@ def handle_generate_key_pair():
         client_keys = ClientKeys(prv_key, pub_key)
         return client_keys
 
+def path_with_respect_to_cd(client, path):
+    if not path.startswith("/"):
+        return os.path.join(client.current_path, path)
+    else:
+        return path
+
+def write_file(client, path, value):
+    final_command = f"set {path} {value}"
+    encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+    response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+    if err is not None:
+        print(response)
+        print(err)
 
 def handle_client_commands(client):
     while True:
@@ -146,9 +159,7 @@ def handle_client_commands(client):
                 print("command mkdir gets only 1 argument")
                 continue
 
-            path = user_command.split(" ")[1]
-            if not path.startswith("/"):
-                path = os.path.join(client.current_path, path)
+            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
             final_command = "mkdir " + path
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
@@ -156,7 +167,11 @@ def handle_client_commands(client):
                 print(response)
                 print(err)
         elif command == "touch":
-            pass  # TODO
+            if len(user_command.split(" ")) != 2:
+                print("command touch gets only 1 argument")
+                continue
+            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
+            write_file(client, path, "")
         elif command == "cd":
             pass  # TODO
         elif command == "ls":
@@ -166,9 +181,7 @@ def handle_client_commands(client):
             path = "."
             if len(user_command.split(" ")) == 2:
                 path = user_command.split(" ")[1]
-            if not path.startswith("/"):
-                path = os.path.join(client.current_path, path)
-            final_command = "ls " + path
+            final_command = "ls " + path_with_respect_to_cd(client, path)
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
             if err is not None:
