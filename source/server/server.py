@@ -4,13 +4,15 @@ import json
 from pathlib import Path
 
 import server_utils
-from file_tree import default_file_tree, create_directory, locate_path, set_file_name
+from file_tree import default_file_tree, create_directory, locate_path, set_file
 
 DIR_NAME = os.path.dirname(__file__)
 DB_PATH = os.path.join(DIR_NAME, "server.db")
 PRV_KEY_PATH = os.path.join(DIR_NAME, 'prv.key')
 PUB_KEY_PATH = os.path.join(DIR_NAME, 'pub.key')
 DATA_PATH = os.path.join(DIR_NAME, 'data')
+
+SEPARATOR = "///Xvc6$8Jf_SEPARATOR_X90kNb%2a///"
 
 
 def initialize():
@@ -139,23 +141,36 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 return "An error occurred while reading file", "File not found"
             if ft['type'] != 'file':
                 return "An error occurred while reading file", f"{ft['name']} is not a file"
-            return Path(os.path.join(DATA_PATH, ft['content'])).read_text(), None
+
+            if not os.path.exists(os.path.join(DATA_PATH, ft['fs_file_name'])):
+                return "An error occurred while reading file", "File is lost!"
+            encrypted_value = Path(os.path.join(DATA_PATH, ft['fs_file_name'])).read_text()
+            enc_key = ft['enc_key']
+            tag = ft['tag']
+            nonce = ft['nonce']
+
+            response = encrypted_value + SEPARATOR + enc_key + SEPARATOR + tag + SEPARATOR + nonce
+            return response, None
         except Exception as err:
-            return "An error occurred while ls", err
+            return "An error occurred while reading file", err
     elif command == "set":
         try:
-            path = user_command.split(" ")[1]
-            value = " ".join(user_command.split(" ")[2:])
+            path = user_command.split(SEPARATOR)[1]
+            encrypted_value = user_command.split(SEPARATOR)[2]
+            enc_key = user_command.split(SEPARATOR)[3]
+            tag = user_command.split(SEPARATOR)[4]
+            nonce = user_command.split(SEPARATOR)[5]
+
             file_tree = get_user_file_tree(username)
             try:
                 ft = locate_path(file_tree, path)
-                file_name = ft['content']
+                file_name = ft['fs_file_name']
             except IndexError:  # file not exist
                 file_name = os.urandom(40).hex()
             file_to_write = Path(os.path.join(DATA_PATH, file_name))
-            file_to_write.write_text(value)
+            file_to_write.write_text(encrypted_value)
             # TODO check permission
-            set_file_name(file_tree, path, file_name)
+            set_file(file_tree, path, file_name, enc_key, tag, nonce)
             store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
@@ -185,7 +200,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     elif command == "revoke":
         pass  # TODO
     else:
-        return "Command not found", None
+        return None, "Command not found"
 
 
 def db_connection():

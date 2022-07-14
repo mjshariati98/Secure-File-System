@@ -102,7 +102,7 @@ def symmetric_decrypt(key, nonce, tag, ciphertext):
         return None
 
 
-def generate_session_key():
+def generate_random_symmetric_key():
     return get_random_bytes(AES_KEY_BITS // 8)
 
 

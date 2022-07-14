@@ -23,7 +23,7 @@ def locate_path(file_tree, path):
     return file_tree
 
 
-def set_file_name(file_tree, path, fs_file_name):
+def set_file(file_tree, path, fs_file_name, enc_key, tag, nonce):
     path_parts = path_to_parts(path)
     name = path_parts[-1]
     path_parts = path_parts[:-1]
@@ -46,12 +46,17 @@ def set_file_name(file_tree, path, fs_file_name):
         new_file = {
             "type": "file",
             "name": name,
-            "content": fs_file_name,
+            "fs_file_name": fs_file_name,
+            "enc_key": enc_key,
+            "tag": tag,
+            "nonce": nonce,
         }
         file_tree['files'].append(new_file)
     else:
-        file_tree_list[0]['content'] = fs_file_name
-
+        file_tree_list[0]['fs_file_name'] = fs_file_name
+        file_tree_list[0]['enc_key'] = enc_key
+        file_tree_list[0]['tag'] = tag
+        file_tree_list[0]['nonce'] = nonce
 
 
 def create_directory(file_tree, path):

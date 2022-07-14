@@ -1,5 +1,6 @@
 import sys
 import os
+import base64
 
 sys.path.append("..")
 sys.path.append("../server")
@@ -10,6 +11,8 @@ from vim import edit_file_in_vim
 import server.api
 
 SERVER_PUB_KEY_PATH = "../server/pub.key"  # It should be in the client side but we do this to be simpler.
+
+SEPARATOR = "///Xvc6$8Jf_SEPARATOR_X90kNb%2a///"
 
 
 def main():
@@ -45,7 +48,7 @@ def handle_sign_in(server_pub_key):
     password = input("Enter your password: ")
 
     # Generate session key and encrypt password with it
-    session_key = client_utils.generate_session_key()
+    session_key = client_utils.generate_random_symmetric_key()
     encrypted_password, nonce, tag = client_utils.symmetric_encrypt(session_key, password)
 
     # Encrypt session key with server public key
@@ -92,7 +95,7 @@ def handle_sign_up(server_pub_key):
     name = input("Enter your name: ")
 
     client.username = username
-    client.session_key = client_utils.generate_session_key()
+    client.session_key = client_utils.generate_random_symmetric_key()
 
     # First encrypt password with session key, then sign it with client private key
     encrypted_password, nonce, tag = client_utils.symmetric_encrypt(client.session_key, password)
@@ -188,15 +191,25 @@ def handle_client_commands(client):
             pass  # TODO
         elif command == "vim":
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
-            val = read_file(client, path)
-            if val is not None:
-                write_file(client, path, edit_file_in_vim(val))
+            value, enc_key = read_file(client, path)
+            if value is not None:
+                write_file(client, path, edit_file_in_vim(value), enc_key=enc_key)
         else:
             print("command " + command + " not found")
 
 
-def write_file(client, path, value):
-    final_command = f"set {path} {value}"
+def write_file(client, path, value, enc_key=None):
+    if enc_key is None:
+        enc_key = client_utils.generate_random_symmetric_key()
+    encrypted_value, nonce, tag = client_utils.symmetric_encrypt(enc_key, value)
+
+    # encrypt enc_key with client pub key
+    encrypted_enc_key = client_utils.asymmetric_encrypt(client.client_keys.pub_key, enc_key)
+    final_command = "set " + SEPARATOR + \
+                    path + SEPARATOR + \
+                    base64.b64encode(encrypted_value).decode() + SEPARATOR + \
+                    base64.b64encode(encrypted_enc_key).decode() + SEPARATOR + \
+                    base64.b64encode(tag).decode() + SEPARATOR + base64.b64encode(nonce).decode()
     encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
     response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
     if err is not None:
@@ -211,8 +224,22 @@ def read_file(client, path):
     if err is not None:
         print(response)
         print(err)
+        return None, None
+
+    encrypted_value = base64.b64decode(response.split(SEPARATOR)[0])
+    encrypted_enc_key = base64.b64decode(response.split(SEPARATOR)[1])
+    tag = base64.b64decode(response.split(SEPARATOR)[2])
+    nonce = base64.b64decode(response.split(SEPARATOR)[3])
+
+    # decrypt enc_key using client prv key
+    enc_key = client_utils.asymmetric_decrypt(client.client_keys.prv_key, encrypted_enc_key)
+
+    # decrypt file using enc_key
+    value = client_utils.symmetric_decrypt(enc_key, nonce, tag, encrypted_value)
+    if value is None:
+        print("File corrupted!")
         return None
-    return response
+    return value.decode('utf-8'), enc_key
 
 
 class Client:
