@@ -95,6 +95,14 @@ def sign_in(username, encrypted_password, nonce, tag, encrypted_session_key):
         return False, err
 
 
+def check_key_match(username, text, signature):
+    user_pub_key = server_utils.import_key(get_user_pub_key(username))
+    verified = server_utils.asymmetric_sign_verify(user_pub_key, text, signature)
+    if not verified:
+        return False, "This key is not matched with the user's stored key at the server"
+    return True, None
+
+
 def add_user_to_db(name, username, password, user_pub_key):
     exec_db_command(
         "INSERT INTO users (name, username, hashed_password, pub_key, file_tree) VALUES (:name, :username, :password, :pub_key, :file_tree)",
@@ -237,6 +245,12 @@ def get_user_hashed_password(username):
 
 def get_user_session_key(username):
     results = exec_db_command_with_result("SELECT session_key FROM users WHERE username=:username",
+                                          {"username": username})
+    return results[0][0]
+
+
+def get_user_pub_key(username):
+    results = exec_db_command_with_result("SELECT pub_key FROM users WHERE username=:username",
                                           {"username": username})
     return results[0][0]
 

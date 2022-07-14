@@ -60,7 +60,17 @@ def handle_sign_in(server_pub_key):
         print(err)
         return None
 
-    client_keys = handle_load_key_pair()  # TODO Do not check that the key belongs to the user
+    client_keys = handle_load_key_pair()
+
+    # Check this key is the same key that the user was signed up with
+    text = "CHECK KEY".encode('utf-8')
+    signature = client_utils.asymmetric_sign(client_keys.prv_key, text)
+    msg, err = server.api.check_key(username, text, signature)
+    print(msg)
+    if err is not None:
+        print(err)
+        return None
+
     client = Client(client_keys)
     client.username = username
     client.session_key = session_key

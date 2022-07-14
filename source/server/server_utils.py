@@ -32,6 +32,10 @@ def load_key(path):
     return key
 
 
+def import_key(key_PEM):
+    return RSA.import_key(key_PEM)
+
+
 def write_to_file(content, path):
     f = open(path, "w")
     f.write(content)
