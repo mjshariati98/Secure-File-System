@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import server_utils
-from file_tree import default_file_tree, create_directory, locate_path, set_file_content
+from file_tree import default_file_tree, create_directory, locate_path, set_file_name
 
 DIR_NAME = os.path.dirname(__file__)
 DB_PATH = os.path.join(DIR_NAME, "server.db")
@@ -128,15 +128,17 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return None, None
         except Exception as err:
             return "An error occurred while creating new directory", err
-    elif command == "touch":
-        pass  # TODO
     elif command == "get":
         try:
             path = user_command.split(" ")[1]
             file_tree = get_user_file_tree(username)
             # TODO check permission
-            ft = locate_path(file_tree, path)
-            print(ft)
+            try:
+                ft = locate_path(file_tree, path)
+            except IndexError:
+                return "An error occurred while reading file", "File not found"
+            if ft['type'] != 'file':
+                return "An error occurred while reading file", f"{ft['name']} is not a file"
             return Path(os.path.join(DATA_PATH, ft['content'])).read_text(), None
         except Exception as err:
             return "An error occurred while ls", err
@@ -145,11 +147,15 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             path = user_command.split(" ")[1]
             value = " ".join(user_command.split(" ")[2:])
             file_tree = get_user_file_tree(username)
-            fname = os.urandom(40).hex()
-            file_to_write = Path(os.path.join(DATA_PATH, fname))
+            try:
+                ft = locate_path(file_tree, path)
+                file_name = ft['content']
+            except IndexError:  # file not exist
+                file_name = os.urandom(40).hex()
+            file_to_write = Path(os.path.join(DATA_PATH, file_name))
             file_to_write.write_text(value)
             # TODO check permission
-            set_file_content(file_tree, path, fname)
+            set_file_name(file_tree, path, file_name)
             store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
@@ -161,8 +167,13 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             path = user_command.split(" ")[1]
             file_tree = get_user_file_tree(username)
             # TODO check permission
-            ft = locate_path(file_tree, path)
-            return " ".join([x['name'] for x in ft['files']]), None
+            try:
+                ft = locate_path(file_tree, path)
+            except IndexError:
+                return "An error occurred while ls", f"Directory not found"
+            if ft['type'] != 'folder':
+                return "An error occurred while ls", f"{ft['name']} is not a folder"
+            return "\t".join([x['name'] for x in ft['files']]), None
         except Exception as err:
             return "An error occurred while ls", err
     elif command == "rm":
