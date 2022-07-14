@@ -37,6 +37,7 @@ def generate_keys():
 def create_db_tables():
     # users table
     exec_db_command("""CREATE TABLE IF NOT EXISTS users (
+    name varchar(256) NOT NULL,
     username varchar(256) NOT NULL,
     hashed_password text NOT NULL,
     pub_key text NOT NULL,
@@ -45,7 +46,7 @@ def create_db_tables():
     )""")
 
 
-def sign_up(username, encrypted_password, nonce, tag, password_signature, encrypted_session_key, user_pub_key):
+def sign_up(name, username, encrypted_password, nonce, tag, password_signature, encrypted_session_key, user_pub_key):
     try:
         server_prv_key = server_utils.load_key(PRV_KEY_PATH)
 
@@ -61,7 +62,7 @@ def sign_up(username, encrypted_password, nonce, tag, password_signature, encryp
 
         hashed_password = server_utils.get_hash(password)
 
-        add_user_to_db(username, hashed_password, server_utils.export_key(user_pub_key))
+        add_user_to_db(name, username, hashed_password, server_utils.export_key(user_pub_key))
         set_session_key(username, session_key)
         return True, None
     except Exception as err:
@@ -92,14 +93,16 @@ def sign_in(username, encrypted_password, nonce, tag, encrypted_session_key):
         return False, err
 
 
-def add_user_to_db(username, password, user_pub_key):
-    exec_db_command("INSERT INTO users (username, hashed_password, pub_key, file_tree) VALUES (:username, :password, :pub_key, :file_tree)",
-                    {
-                        "username": username,
-                        "password": password,
-                        "pub_key": user_pub_key,
-                        "file_tree": json.dumps(default_file_tree()),
-                    })
+def add_user_to_db(name, username, password, user_pub_key):
+    exec_db_command(
+        "INSERT INTO users (name, username, hashed_password, pub_key, file_tree) VALUES (:name, :username, :password, :pub_key, :file_tree)",
+        {
+            "name": name,
+            "username": username,
+            "password": password,
+            "pub_key": user_pub_key,
+            "file_tree": json.dumps(default_file_tree()),
+        })
 
 
 def set_session_key(username, session_key):
@@ -150,7 +153,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
-            return "An error occurred while setting text of the file", err    
+            return "An error occurred while setting text of the file", err
     elif command == "cd":
         pass  # TODO
     elif command == "ls":

@@ -5,10 +5,12 @@ def default_file_tree():
         "files": [],
     }
 
+
 def path_to_parts(path):
     path_parts = path.split("/")
     assert path_parts[0] == '~'
     return path_parts[1:]
+
 
 def locate_path(file_tree, path):
     path_parts = path_to_parts(path)
@@ -19,6 +21,7 @@ def locate_path(file_tree, path):
             raise Exception(f"{file_tree['name']} is not a folder")
         file_tree = [x for x in file_tree['files'] if x['name'] == p][0]
     return file_tree
+
 
 def set_file_content(file_tree, path, content):
     path_parts = path_to_parts(path)
@@ -48,6 +51,7 @@ def set_file_content(file_tree, path, content):
         file_tree['files'].append(nd)
     else:
         l[0]['content'] = content
+
 
 def create_directory(file_tree, path):
     path_parts = path_to_parts(path)

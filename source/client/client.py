@@ -89,6 +89,7 @@ def handle_sign_up(server_pub_key):
 
     username = input("Enter your username: ")
     password = input("Enter your password: ")
+    name = input("Enter your name: ")
 
     client.username = username
     client.session_key = client_utils.generate_session_key()
@@ -100,7 +101,7 @@ def handle_sign_up(server_pub_key):
     # Also encrypt session key with server public key
     encrypted_session_key = client_utils.asymmetric_encrypt(server_pub_key, client.session_key)
 
-    msg, err = server.api.sign_up_user(username, encrypted_password, nonce, tag, password_signature, encrypted_session_key,
+    msg, err = server.api.sign_up_user(name, username, encrypted_password, nonce, tag, password_signature, encrypted_session_key,
                                        client.client_keys.pub_key)
     print(msg)
     if err is not None:
@@ -133,11 +134,13 @@ def handle_generate_key_pair():
         client_keys = ClientKeys(prv_key, pub_key)
         return client_keys
 
+
 def path_with_respect_to_cd(client, path):
     if not path.startswith("/"):
         return os.path.join(client.current_path, path)
     else:
         return path
+
 
 def write_file(client, path, value):
     final_command = f"set {path} {value}"
@@ -146,6 +149,7 @@ def write_file(client, path, value):
     if err is not None:
         print(response)
         print(err)
+
 
 def read_file(client, path):
     final_command = f"get {path}"
@@ -156,6 +160,7 @@ def read_file(client, path):
         print(err)
         return None
     return response
+
 
 def handle_client_commands(client):
     while True:
