@@ -104,3 +104,10 @@ def symmetric_decrypt(key, nonce, tag, ciphertext):
 
 def generate_session_key():
     return get_random_bytes(AES_KEY_BITS // 8)
+
+
+def path_with_respect_to_cd(client, path):
+    if not path.startswith("/"):
+        return os.path.join(client.current_path, path)
+    else:
+        return path

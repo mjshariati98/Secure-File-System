@@ -135,11 +135,64 @@ def handle_generate_key_pair():
         return client_keys
 
 
-def path_with_respect_to_cd(client, path):
-    if not path.startswith("/"):
-        return os.path.join(client.current_path, path)
-    else:
-        return path
+def handle_client_commands(client):
+    while True:
+        current_path = client.current_path
+        user_command = input(client.username + ":" + current_path + "$ ")
+        command = user_command.split(" ")[0]
+
+        if command == "exit":
+            raise SystemExit
+        elif command == "mkdir":
+            if len(user_command.split(" ")) != 2:
+                print("command mkdir gets only 1 argument")
+                continue
+
+            path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
+            final_command = "mkdir " + path
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+        elif command == "touch":
+            if len(user_command.split(" ")) != 2:
+                print("command touch gets only 1 argument")
+                continue
+            path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
+            write_file(client, path, "")
+        elif command == "cd":
+            pass  # TODO
+        elif command == "ls":
+            if len(user_command.split(" ")) > 2:
+                print("command ls gets only 1 argument")
+                continue
+            path = "."
+            if len(user_command.split(" ")) == 2:
+                path = user_command.split(" ")[1]
+            final_command = "ls " + client_utils.path_with_respect_to_cd(client, path)
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+            else:
+                print(response)
+        elif command == "rm":
+            pass  # TODO
+        elif command == "mv":
+            pass  # TODO
+        elif command == "share":
+            pass  # TODO
+        elif command == "revoke":
+            pass  # TODO
+        elif command == "vim":
+            path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
+            val = read_file(client, path)
+            if val is not None:
+                write_file(client, path, edit_file_in_vim(val))
+        else:
+            print("command " + command + " not found")
 
 
 def write_file(client, path, value):
@@ -160,66 +213,6 @@ def read_file(client, path):
         print(err)
         return None
     return response
-
-
-def handle_client_commands(client):
-    while True:
-        current_path = client.current_path
-        user_command = input(client.username + ":" + current_path + "$ ")
-        command = user_command.split(" ")[0]
-
-        if command == "exit":
-            raise SystemExit
-        elif command == "mkdir":
-            if len(user_command.split(" ")) != 2:
-                print("command mkdir gets only 1 argument")
-                continue
-
-            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
-            final_command = "mkdir " + path
-            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
-            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
-            if err is not None:
-                print(response)
-                print(err)
-        elif command == "touch":
-            if len(user_command.split(" ")) != 2:
-                print("command touch gets only 1 argument")
-                continue
-            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
-            write_file(client, path, "")
-        elif command == "cd":
-            pass  # TODO
-        elif command == "ls":
-            if len(user_command.split(" ")) > 2:
-                print("command ls gets more than two arguments")
-                continue
-            path = "."
-            if len(user_command.split(" ")) == 2:
-                path = user_command.split(" ")[1]
-            final_command = "ls " + path_with_respect_to_cd(client, path)
-            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
-            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
-            if err is not None:
-                print(response)
-                print(err)
-            else:
-                print(response)
-        elif command == "rm":
-            pass  # TODO
-        elif command == "mv":
-            pass  # TODO
-        elif command == "share":
-            pass  # TODO
-        elif command == "revoke":
-            pass  # TODO
-        elif command == "vim":
-            path = path_with_respect_to_cd(client, user_command.split(" ")[1])
-            val = read_file(client, path)
-            if val is not None:
-                write_file(client, path, edit_file_in_vim(val))
-        else:
-            print("command " + command + " not found")
 
 
 class Client:
