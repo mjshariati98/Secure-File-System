@@ -108,6 +108,6 @@ def generate_session_key():
 
 def path_with_respect_to_cd(client, path):
     if not path.startswith("/"):
-        return os.path.join(client.current_path, path)
+        return os.path.normpath(os.path.join(client.current_path, path))
     else:
-        return path
+        return os.path.normpath(path)
