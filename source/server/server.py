@@ -184,7 +184,19 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         except Exception as err:
             return "An error occurred while setting text of the file", err
     elif command == "cd":
-        pass  # TODO
+        try:
+            path = user_command.split(" ")[1]
+            file_tree = get_user_file_tree(username)
+            # TODO check permission
+            try:
+                ft = locate_path(file_tree, path)
+            except IndexError:
+                return "An error occurred while cd", f"Directory not found"
+            if ft['type'] != 'folder':
+                return "An error occurred while cd", f"{ft['name']} is not a folder"
+            return "OK", None
+        except Exception as err:
+            return "An error occurred while cd", err
     elif command == "ls":
         try:
             path = user_command.split(" ")[1]

@@ -176,10 +176,17 @@ def handle_client_commands(client):
             write_file(client, path, "")
         elif command == "cd":
             if len(user_command.split(" ")) != 2:
-                print("command touch gets only 1 argument")
+                print("command cd gets only 1 argument")
                 continue
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
-            client.current_path = path
+            final_command = f"cd {path}"
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+            else:
+                client.current_path = path
         elif command == "ls":
             if len(user_command.split(" ")) > 2:
                 print("command ls gets only 1 argument")
