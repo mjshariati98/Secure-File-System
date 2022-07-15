@@ -22,6 +22,13 @@ def locate_path(file_tree, path):
         file_tree = [x for x in file_tree['files'] if x['name'] == p][0]
     return file_tree
 
+def iterate_subtree_files(file_tree):
+    if file_tree['type'] == 'file':
+        yield file_tree
+    else:
+        for x in file_tree['files']:
+            for y in iterate_subtree_files(x):
+                yield y
 
 def insert_subtree(file_tree, path, tree):
     path_parts = path_to_parts(path)

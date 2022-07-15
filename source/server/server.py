@@ -226,9 +226,15 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 return "An error occurred while removing file", "File not found"
             if ft['type'] == 'folder' and user_command.split(" ")[-2] != "-r":
                 return "An error occurred while removing file", "Folder need -r"
+            r, e = None, None
+            for x in iterate_subtree_files(ft):
+                try:
+                    os.remove(os.path.join(DATA_PATH, x['fs_file_name']))
+                except Exception as err:
+                    r, e = f"File {x['fs_file_name']} is also removed by enemy", err
             remove_subtree(file_tree, path)
             store_user_file_tree(username, file_tree)
-            return None, None
+            return r, e
         except Exception as err:
             return "An error occurred while removing", err
     elif command == "mv":
