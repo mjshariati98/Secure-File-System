@@ -107,7 +107,3 @@ def get_hash(data):
 
 def export_key(key):
     return key.exportKey().decode('ascii')
-
-
-def home_dir_path(username, data_path):
-    return os.path.join(data_path, username)  # TODO use hash of username or sth else

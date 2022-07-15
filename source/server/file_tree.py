@@ -22,6 +22,7 @@ def locate_path(file_tree, path):
         file_tree = [x for x in file_tree['files'] if x['name'] == p][0]
     return file_tree
 
+
 def insert_subtree(file_tree, path, tree):
     path_parts = path_to_parts(path)
     name = path_parts[-1]
@@ -36,6 +37,7 @@ def insert_subtree(file_tree, path, tree):
     tree['name'] = name
     file_tree['files'].append(tree)
 
+
 def remove_subtree(file_tree, path):
     path_parts = path_to_parts(path)
     name = path_parts[-1]
@@ -46,6 +48,7 @@ def remove_subtree(file_tree, path):
         file_tree_list = [x for x in file_tree['files'] if x['name'] == p]
         file_tree = file_tree_list[0]
     file_tree['files'] = [x for x in file_tree['files'] if x['name'] != name]
+
 
 def set_file(file_tree, path, fs_file_name, enc_key, tag, nonce):
     path_parts = path_to_parts(path)

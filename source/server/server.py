@@ -33,7 +33,7 @@ def initialize():
 
 def generate_keys():
     prv_key, pub_key = server_utils.generate_RSA_key_pair()
-    server_utils.save_key_pair(prv_key, pub_key, path=".")  # TODO correct method
+    server_utils.save_key_pair(prv_key, pub_key, path=".")
 
 
 def create_db_tables():
@@ -56,11 +56,10 @@ def sign_up(name, username, encrypted_password, nonce, tag, password_signature, 
 
         verified = server_utils.asymmetric_sign_verify(user_pub_key, encrypted_password, password_signature)
         if not verified:
-            print("Not verified by user public key")
-            return  # TODO
+            return False, "Password signature not verified by user public key"
         password = server_utils.symmetric_decrypt(session_key, nonce, tag, encrypted_password)
         if password is None:
-            print("Not verified by session key tag")  # TODO
+            return False, "Password corrupted"
 
         hashed_password = server_utils.get_hash(password)
 
@@ -79,7 +78,7 @@ def sign_in(username, encrypted_password, nonce, tag, encrypted_session_key):
 
         password = server_utils.symmetric_decrypt(session_key, nonce, tag, encrypted_password)
         if password is None:
-            print("Not verified by session key tag")  # TODO
+            return False, "Password corrupted"
 
         try:
             user_hashed_password = get_user_hashed_password(username)
@@ -124,11 +123,11 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     user_session_key = get_user_session_key(username)
     user_command = server_utils.symmetric_decrypt(user_session_key, nonce, tag, encrypted_command)
     if user_command is None:
-        print("Not verified by session key tag")  # TODO
+        return None, "Command corrupted"
     user_command = user_command.decode()
 
     command = user_command.split(" ")[0]
-    if command == "mkdir":  # TODO hash addresses
+    if command == "mkdir":
         try:
             path = user_command.split(" ")[1]
             file_tree = get_user_file_tree(username)
@@ -223,7 +222,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 return "An error occurred while removing file", "Folder need -r"
             remove_subtree(file_tree, path)
             store_user_file_tree(username, file_tree)
-            return None, None    
+            return None, None
         except Exception as err:
             return "An error occurred while removing", err
     elif command == "mv":
@@ -240,7 +239,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             remove_subtree(file_tree, from_path)
             insert_subtree(file_tree, to_path, ft)
             store_user_file_tree(username, file_tree)
-            return None, None    
+            return None, None
         except Exception as err:
             return "An error occurred while removing", err
     elif command == "share":
