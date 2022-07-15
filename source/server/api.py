@@ -17,8 +17,8 @@ def sign_in_user(username, encrypted_password, nonce, tag, encrypted_session_key
         return "An error occurred during signing in user", err
 
 
-def check_key(username, text, signature):
-    successful, err = check_key_match(username, text, signature)
+def check_key(username, text, encrypted_signature, nonce, tag):
+    successful, err = check_key_match(username, text, encrypted_signature, nonce, tag)
     if successful:
         return "Key Loaded successfully", None
     else:

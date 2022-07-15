@@ -87,7 +87,9 @@ def asymmetric_sign_verify(key, data, signature):
 def symmetric_encrypt(key, plaintext):
     cipher = AES.new(key, AES.MODE_EAX)
     nonce = cipher.nonce
-    ciphertext, tag = cipher.encrypt_and_digest(plaintext.encode())
+    if not isinstance(plaintext, bytes):
+        plaintext = plaintext.encode()
+    ciphertext, tag = cipher.encrypt_and_digest(plaintext)
 
     return ciphertext, nonce, tag
 

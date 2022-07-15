@@ -94,8 +94,14 @@ def sign_in(username, encrypted_password, nonce, tag, encrypted_session_key):
         return False, err
 
 
-def check_key_match(username, text, signature):
+def check_key_match(username, text, encrypted_signature, nonce, tag):
+    user_session_key = get_user_session_key(username)
     user_pub_key = server_utils.import_key(get_user_pub_key(username))
+
+    signature = server_utils.symmetric_decrypt(user_session_key, nonce, tag, encrypted_signature)
+    if signature is None:
+        return False, "Signature corrupted"
+
     verified = server_utils.asymmetric_sign_verify(user_pub_key, text, signature)
     if not verified:
         return False, "This key is not matched with the user's stored key at the server"

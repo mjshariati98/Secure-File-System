@@ -65,7 +65,8 @@ def handle_sign_in(server_pub_key):
     # Check this key is the same key that the user was signed up with
     text = "CHECK KEY".encode('utf-8')
     signature = client_utils.asymmetric_sign(client_keys.prv_key, text)
-    msg, err = server.api.check_key(username, text, signature)
+    encrypted_signature, nonce, tag = client_utils.symmetric_encrypt(session_key, signature)
+    msg, err = server.api.check_key(username, text, encrypted_signature, nonce, tag)
     print(msg)
     if err is not None:
         print(err)
