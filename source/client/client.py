@@ -209,7 +209,19 @@ def handle_client_commands(client):
             if err is not None:
                 print(err)
         elif command == "mv":
-            pass  # TODO
+            ucsplited = user_command.split(" ")
+            if len(ucsplited) != 3 and ucsplited[1] != "-r":
+                print("bad arguments for mv")
+                continue
+            ucsplited[-1] = client_utils.path_with_respect_to_cd(client, ucsplited[-1])
+            ucsplited[-2] = client_utils.path_with_respect_to_cd(client, ucsplited[-2])
+            final_command = " ".join(ucsplited)
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if response is not None:
+                print(response)
+            if err is not None:
+                print(err)
         elif command == "share":
             pass  # TODO
         elif command == "revoke":

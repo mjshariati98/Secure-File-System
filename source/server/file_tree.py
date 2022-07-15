@@ -22,6 +22,20 @@ def locate_path(file_tree, path):
         file_tree = [x for x in file_tree['files'] if x['name'] == p][0]
     return file_tree
 
+def insert_subtree(file_tree, path, tree):
+    path_parts = path_to_parts(path)
+    name = path_parts[-1]
+    path_parts = path_parts[:-1]
+    for p in path_parts:
+        if file_tree['type'] != 'folder':
+            raise Exception(f"{file_tree['name']} is not a folder")
+        file_tree_list = [x for x in file_tree['files'] if x['name'] == p]
+        file_tree = file_tree_list[0]
+    if len([x for x in file_tree['files'] if x['name'] == name]) != 0:
+        raise Exception("target exists")
+    tree['name'] = name
+    file_tree['files'].append(tree)
+
 def remove_subtree(file_tree, path):
     path_parts = path_to_parts(path)
     name = path_parts[-1]
