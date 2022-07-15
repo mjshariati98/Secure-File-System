@@ -26,7 +26,7 @@ def main():
     while valid_input is False:
         print("1: Sing-in")
         print("2: Sign-up")
-        user_input = input("Enter your choice (`exit` for exit from the program): ")
+        user_input = input("Enter your choice (`exit` for exit from the file-system): ")
         if user_input == 'exit':
             raise SystemExit
         elif user_input == '1':
@@ -156,7 +156,8 @@ def handle_client_commands(client):
         command = user_command.split(" ")[0]
 
         if command == "exit":
-            raise SystemExit
+            main()
+            return
         elif command == "mkdir":
             if len(user_command.split(" ")) != 2:
                 print("command mkdir gets only 1 argument")
