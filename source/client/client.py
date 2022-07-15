@@ -175,7 +175,11 @@ def handle_client_commands(client):
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
             write_file(client, path, "")
         elif command == "cd":
-            pass  # TODO
+            if len(user_command.split(" ")) != 2:
+                print("command touch gets only 1 argument")
+                continue
+            path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
+            client.current_path = path
         elif command == "ls":
             if len(user_command.split(" ")) > 2:
                 print("command ls gets only 1 argument")
@@ -192,7 +196,18 @@ def handle_client_commands(client):
             else:
                 print(response)
         elif command == "rm":
-            pass  # TODO
+            ucsplited = user_command.split(" ")
+            if len(ucsplited) != 2 and ucsplited[1] != "-r":
+                print("bad arguments for rm")
+                continue
+            ucsplited[-1] = client_utils.path_with_respect_to_cd(client, ucsplited[-1])
+            final_command = " ".join(ucsplited)
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if response is not None:
+                print(response)
+            if err is not None:
+                print(err)
         elif command == "mv":
             pass  # TODO
         elif command == "share":

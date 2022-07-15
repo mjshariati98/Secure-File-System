@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import server_utils
-from file_tree import default_file_tree, create_directory, locate_path, set_file
+from file_tree import default_file_tree, create_directory, locate_path, set_file, remove_subtree
 
 DIR_NAME = os.path.dirname(__file__)
 DB_PATH = os.path.join(DIR_NAME, "server.db")
@@ -200,7 +200,20 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         except Exception as err:
             return "An error occurred while ls", err
     elif command == "rm":
-        pass  # TODO
+        try:
+            path = user_command.split(" ")[-1]
+            file_tree = get_user_file_tree(username)
+            try:
+                ft = locate_path(file_tree, path)
+            except IndexError:
+                return "An error occurred while removing file", "File not found"
+            if ft['type'] == 'folder' and user_command.split(" ")[-2] != "-r":
+                return "An error occurred while removing file", "Folder need -r"
+            remove_subtree(file_tree, path)
+            store_user_file_tree(username, file_tree)
+            return None, None    
+        except Exception as err:
+            return "An error occurred while removing", err
     elif command == "mv":
         pass  # TODO
     elif command == "share":
