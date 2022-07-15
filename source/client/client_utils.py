@@ -107,7 +107,7 @@ def generate_random_symmetric_key():
 
 
 def path_with_respect_to_cd(client, path):
-    if not path.startswith("/"):
+    if not path.startswith("/") and  not path.startswith("~"):
         return os.path.normpath(os.path.join(client.current_path, path))
     else:
         return os.path.normpath(path)
