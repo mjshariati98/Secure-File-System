@@ -1,16 +1,17 @@
 def default_file_tree():
     return {
         "type": "folder",
-        "name": "~",
-        "files": [],
+        "name": "the_root",
+        "files": [{
+            "type": "folder",
+            "name": "~",
+            "files": [],
+        }]
     }
 
 
 def path_to_parts(path):
-    path_parts = path.split("/")
-    assert path_parts[0] == '~'
-    return path_parts[1:]
-
+    return path.split("/")
 
 def locate_path(file_tree, path):
     path_parts = path_to_parts(path)
@@ -38,7 +39,16 @@ def insert_subtree(file_tree, path, tree):
         if file_tree['type'] != 'folder':
             raise Exception(f"{file_tree['name']} is not a folder")
         file_tree_list = [x for x in file_tree['files'] if x['name'] == p]
-        file_tree = file_tree_list[0]
+        if len(file_tree_list) == 0:
+            new_folder = {
+                "type": "folder",
+                "name": p,
+                "files": [],
+            }
+            file_tree['files'].append(new_folder)
+            file_tree = new_folder
+        else:
+            file_tree = file_tree_list[0]
     if len([x for x in file_tree['files'] if x['name'] == name]) != 0:
         raise Exception("target exists")
     tree['name'] = name

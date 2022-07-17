@@ -232,9 +232,21 @@ def handle_client_commands(client):
             if err is not None:
                 print(err)
         elif command == "share":
-            pass  # TODO
+            ucsplited = user_command.split(" ")
+            if len(ucsplited) != 3:
+                print("bad arguments for share")
+                continue
+            user = ucsplited[1]
+            path = client_utils.path_with_respect_to_cd(client, ucsplited[2])
+            final_command = f"share {user} {path}"
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if response is not None:
+                print(response)
+            if err is not None:
+                print(err)
         elif command == "revoke":
-            pass  # TODO
+            pass
         elif command == "vim":
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
             value, enc_key = read_file(client, path)

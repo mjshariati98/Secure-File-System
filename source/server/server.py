@@ -255,7 +255,21 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         except Exception as err:
             return "An error occurred while removing", err
     elif command == "share":
-        pass  # TODO
+        try:
+            _, target_user, path = user_command.split(" ")
+            file_tree = get_user_file_tree(username)
+            target_file_tree = get_user_file_tree(target_user)
+            try:
+                ft = locate_path(file_tree, path)
+            except IndexError:
+                return "An error occurred while sharing file", "File not found"
+            if ft['type'] == 'folder':
+                return "An error occurred while sharing file", "Share folder is not implemented yet"
+            insert_subtree(target_file_tree, path.replace("~", f"{username}"), ft)
+            store_user_file_tree(target_user, target_file_tree)
+            return None, None
+        except Exception as err:
+            return "An error occurred while sharing", err
     elif command == "revoke":
         pass  # TODO
     else:
