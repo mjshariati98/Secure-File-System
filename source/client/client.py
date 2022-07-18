@@ -175,7 +175,10 @@ def handle_client_commands(client):
                 print("command touch gets only 1 argument")
                 continue
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
-            write_file(client, path, "")
+            response, err = write_file(client, path, "")
+            if err is not None:
+                print(response)
+                print(err)
         elif command == "cd":
             if len(user_command.split(" ")) != 2:
                 print("command cd gets only 1 argument")
@@ -205,12 +208,12 @@ def handle_client_commands(client):
             else:
                 print(response)
         elif command == "rm":
-            ucsplited = user_command.split(" ")
-            if len(ucsplited) != 2 and ucsplited[1] != "-r":
+            user_command_parts = user_command.split(" ")
+            if len(user_command_parts) != 2 and user_command_parts[1] != "-r":
                 print("bad arguments for rm")
                 continue
-            ucsplited[-1] = client_utils.path_with_respect_to_cd(client, ucsplited[-1])
-            final_command = " ".join(ucsplited)
+            user_command_parts[-1] = client_utils.path_with_respect_to_cd(client, user_command_parts[-1])
+            final_command = " ".join(user_command_parts)
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
             if response is not None:
@@ -218,13 +221,13 @@ def handle_client_commands(client):
             if err is not None:
                 print(err)
         elif command == "mv":
-            ucsplited = user_command.split(" ")
-            if len(ucsplited) != 3 and ucsplited[1] != "-r":
+            user_command_parts = user_command.split(" ")
+            if len(user_command_parts) != 3 and user_command_parts[1] != "-r":
                 print("bad arguments for mv")
                 continue
-            ucsplited[-1] = client_utils.path_with_respect_to_cd(client, ucsplited[-1])
-            ucsplited[-2] = client_utils.path_with_respect_to_cd(client, ucsplited[-2])
-            final_command = " ".join(ucsplited)
+            user_command_parts[-1] = client_utils.path_with_respect_to_cd(client, user_command_parts[-1])
+            user_command_parts[-2] = client_utils.path_with_respect_to_cd(client, user_command_parts[-2])
+            final_command = " ".join(user_command_parts)
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
             if response is not None:
@@ -232,13 +235,39 @@ def handle_client_commands(client):
             if err is not None:
                 print(err)
         elif command == "share":
-            ucsplited = user_command.split(" ")
-            if len(ucsplited) != 3:
+            user_command_parts = user_command.split(" ")
+            if len(user_command_parts) < 3 or len(user_command_parts) > 4:
                 print("bad arguments for share")
                 continue
-            user = ucsplited[1]
-            path = client_utils.path_with_respect_to_cd(client, ucsplited[2])
-            final_command = f"share {user} {path}"
+            path = client_utils.path_with_respect_to_cd(client, user_command_parts[1])
+            target_user = user_command_parts[2]
+            share_mode = "r"
+            if len(user_command_parts) == 4:
+                share_mode = user_command_parts[3][1:]
+            if not (share_mode == "r" or share_mode == "rw"):
+                print("Invalid share mode. Support modes are -r, -rw")
+                continue
+
+            target_user_pubkey, err = get_users_pub_key(client, target_user)
+            if err is not None:
+                print(err)
+                continue
+
+            _, enc_key, user_access = read_file(client, path)
+            if enc_key is None:
+                continue
+            if user_access != 'owner':
+                print("Only owner of a file can share it.")
+                continue
+
+            # Encrypt enc_key with target user's pub key
+            encrypted_enc_key = client_utils.asymmetric_encrypt(client_utils.import_key(target_user_pubkey), enc_key)
+
+            final_command = "share " + SEPARATOR + \
+                            target_user + SEPARATOR + \
+                            path + SEPARATOR + \
+                            share_mode + SEPARATOR + \
+                            base64.b64encode(encrypted_enc_key).decode()
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
             if response is not None:
@@ -246,12 +275,29 @@ def handle_client_commands(client):
             if err is not None:
                 print(err)
         elif command == "revoke":
-            pass
+            user_command_parts = user_command.split(" ")
+            if len(user_command_parts) != 3:
+                print("command revoke gets 2 arguments")
+            path = client_utils.path_with_respect_to_cd(client, user_command_parts[1])
+            target_user = user_command_parts[2]
+
+            final_command = f"revoke {path} {target_user}"
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if response is not None:
+                print(response)
+            if err is not None:
+                print(err)
         elif command == "vim":
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
-            value, enc_key = read_file(client, path)
+            value, enc_key, user_access = read_file(client, path)
             if value is not None:
-                write_file(client, path, edit_file_in_vim(value), enc_key=enc_key)
+                new_value = edit_file_in_vim(value, mode=user_access)
+                if user_access == "owner" or user_access == "rw":
+                    response, err = write_file(client, path, new_value, enc_key=enc_key)
+                if err is not None:
+                    print(response)
+                    print(err)
         else:
             print("command " + command + " not found")
 
@@ -270,9 +316,7 @@ def write_file(client, path, value, enc_key=None):
                     base64.b64encode(tag).decode() + SEPARATOR + base64.b64encode(nonce).decode()
     encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
     response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
-    if err is not None:
-        print(response)
-        print(err)
+    return response, err
 
 
 def read_file(client, path):
@@ -282,12 +326,13 @@ def read_file(client, path):
     if err is not None:
         print(response)
         print(err)
-        return None, None
+        return None, None, None
 
     encrypted_value = base64.b64decode(response.split(SEPARATOR)[0])
     encrypted_enc_key = base64.b64decode(response.split(SEPARATOR)[1])
     tag = base64.b64decode(response.split(SEPARATOR)[2])
     nonce = base64.b64decode(response.split(SEPARATOR)[3])
+    user_access = response.split(SEPARATOR)[4]
 
     # decrypt enc_key using client prv key
     enc_key = client_utils.asymmetric_decrypt(client.client_keys.prv_key, encrypted_enc_key)
@@ -296,8 +341,15 @@ def read_file(client, path):
     value = client_utils.symmetric_decrypt(enc_key, nonce, tag, encrypted_value)
     if value is None:
         print("File corrupted!")
-        return None
-    return value.decode('utf-8'), enc_key
+        return None, None, None
+    return value.decode('utf-8'), enc_key, user_access
+
+
+def get_users_pub_key(client, username):
+    command = f"pubkey {username}"
+    encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, command)
+    response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+    return response, err
 
 
 class Client:

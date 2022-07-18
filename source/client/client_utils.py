@@ -38,6 +38,10 @@ def load_key(path):
     return key
 
 
+def import_key(key_PEM):
+    return RSA.import_key(key_PEM)
+
+
 def get_pub_key(prv_key):
     return prv_key.publickey()
 
@@ -109,7 +113,7 @@ def generate_random_symmetric_key():
 
 
 def path_with_respect_to_cd(client, path):
-    if not path.startswith("/") and  not path.startswith("~"):
+    if not path.startswith("/") and not path.startswith("~"):
         return os.path.normpath(os.path.join(client.current_path, path))
     else:
         return os.path.normpath(path)

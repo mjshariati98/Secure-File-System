@@ -161,8 +161,10 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             enc_key = ft['enc_key']
             tag = ft['tag']
             nonce = ft['nonce']
-
-            response = encrypted_value + SEPARATOR + enc_key + SEPARATOR + tag + SEPARATOR + nonce
+            user_access = "owner"
+            if 'user_access' in ft:  # TODO
+                user_access = ft['user_access']
+            response = encrypted_value + SEPARATOR + enc_key + SEPARATOR + tag + SEPARATOR + nonce + SEPARATOR + user_access
             return response, None
         except Exception as err:
             return "An error occurred while reading file", err
@@ -256,7 +258,11 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while removing", err
     elif command == "share":
         try:
-            _, target_user, path = user_command.split(" ")
+            target_user = user_command.split(SEPARATOR)[1]
+            path = user_command.split(SEPARATOR)[2]
+            user_access = user_command.split(SEPARATOR)[3]
+            enc_key = user_command.split(SEPARATOR)[4]
+
             file_tree = get_user_file_tree(username)
             target_file_tree = get_user_file_tree(target_user)
             try:
@@ -264,14 +270,41 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             except IndexError:
                 return "An error occurred while sharing file", "File not found"
             if ft['type'] == 'folder':
-                return "An error occurred while sharing file", "Share folder is not implemented yet"
+                return "An error occurred while sharing file", "Sharing folders is not possible"
+            ft['enc_key'] = enc_key  # TODO We should add target user with its enk_key to file metadata
+            ft['user_access'] = user_access  # TODO We should add target user with its user_access to file metadata
             insert_subtree(target_file_tree, path.replace("~", f"{username}"), ft)
             store_user_file_tree(target_user, target_file_tree)
             return None, None
         except Exception as err:
             return "An error occurred while sharing", err
     elif command == "revoke":
-        pass  # TODO
+        path = user_command.split(" ")[1]
+        target_user = user_command.split(" ")[2]
+
+        file_tree = get_user_file_tree(username)
+        try:
+            ft = locate_path(file_tree, path)
+        except IndexError:
+            return "An error occurred while revoking file", "File not found"
+        if ft['type'] == 'folder':
+            return "An error occurred while revoking file", "Sharing and revoking folders are not possible"
+
+        # TODO check this request comes from owner of file
+        # TODO check file is shared with the target user
+        # TODO remove user from file's share filed in metadata
+
+        return "Access of " + target_user + " from file " + path + " revoked successfully", None
+    elif command == "pubkey":
+        try:
+            target_user = user_command.split(" ")[1]
+            try:
+                target_user_pubkey = get_user_pub_key(target_user)
+            except IndexError:
+                return "An error occurred while pubkey", "Target user not found"
+            return target_user_pubkey, None
+        except Exception as err:
+            return "An error occurred while pubkey", err
     else:
         return None, "Command not found"
 

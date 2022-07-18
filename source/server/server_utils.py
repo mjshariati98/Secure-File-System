@@ -36,6 +36,10 @@ def import_key(key_PEM):
     return RSA.import_key(key_PEM)
 
 
+def export_key(key):
+    return key.exportKey().decode('ascii')
+
+
 def write_to_file(content, path):
     f = open(path, "w")
     f.write(content)
@@ -105,7 +109,3 @@ def symmetric_decrypt(key, nonce, tag, ciphertext):
 def get_hash(data):
     hash_obj = SHA256.new(data)
     return hash_obj.hexdigest()
-
-
-def export_key(key):
-    return key.exportKey().decode('ascii')
