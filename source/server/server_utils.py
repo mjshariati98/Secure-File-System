@@ -109,3 +109,7 @@ def symmetric_decrypt(key, nonce, tag, ciphertext):
 def get_hash(data):
     hash_obj = SHA256.new(data)
     return hash_obj.hexdigest()
+
+def destruct_path(path):
+    user, p = path.split(":")
+    return user, p

@@ -6,7 +6,9 @@ def default_file_tree():
             "type": "folder",
             "name": "~",
             "files": [],
-        }]
+            "user_access": {},
+        }],
+        "user_access": {},
     }
 
 
@@ -47,6 +49,7 @@ def insert_subtree(file_tree, path, tree):
                 "type": "folder",
                 "name": p,
                 "files": [],
+                "user_access": {},
             }
             file_tree['files'].append(new_folder)
             file_tree = new_folder
@@ -85,6 +88,7 @@ def set_file(file_tree, path, fs_file_name, enc_key, tag, nonce):
                 "type": "folder",
                 "name": p,
                 "files": [],
+                "user_access": {},
             }
             file_tree['files'].append(new_folder)
             file_tree = new_folder
@@ -99,6 +103,7 @@ def set_file(file_tree, path, fs_file_name, enc_key, tag, nonce):
             "enc_key": enc_key,
             "tag": tag,
             "nonce": nonce,
+            "user_access": {},
         }
         file_tree['files'].append(new_file)
     else:
@@ -119,6 +124,7 @@ def create_directory(file_tree, path):
                 "type": "folder",
                 "name": p,
                 "files": [],
+                "user_access": {},
             }
             file_tree['files'].append(new_folder)
             file_tree = new_folder

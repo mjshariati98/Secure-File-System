@@ -135,9 +135,10 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     command = user_command.split(" ")[0]
     if command == "mkdir":
         try:
-            path = user_command.split(" ")[1]
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            if dest_user != username:
+                return "Access denied", "You can't create directory for other users"
             file_tree = get_user_file_tree(username)
-            # TODO check permission
             create_directory(file_tree, path)
             store_user_file_tree(username, file_tree)
             return None, None
@@ -145,16 +146,17 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while creating new directory", err
     elif command == "get":
         try:
-            path = user_command.split(" ")[1]
-            file_tree = get_user_file_tree(username)
-            # TODO check permission
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            file_tree = get_user_file_tree(dest_user)
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
                 return "An error occurred while reading file", "File not found"
+            # Here we don't say "Access denied" to not expose the list of files
+            if dest_user != username and username not in ft["user_access"]:
+                return "An error occurred while reading file", "File not found"
             if ft['type'] != 'file':
                 return "An error occurred while reading file", f"{ft['name']} is not a file"
-
             if not os.path.exists(os.path.join(DATA_PATH, ft['fs_file_name'])):
                 return "An error occurred while reading file", "File is lost!"
             encrypted_value = Path(os.path.join(DATA_PATH, ft['fs_file_name'])).read_text()
@@ -162,21 +164,23 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             tag = ft['tag']
             nonce = ft['nonce']
             user_access = "owner"
-            if 'user_access' in ft:  # TODO
-                user_access = ft['user_access']
+            if dest_user != username:  # TODO
+                user_access = ft['user_access'][username]['permissions']
+                enc_key = ft['user_access'][username]['enc_key']
             response = encrypted_value + SEPARATOR + enc_key + SEPARATOR + tag + SEPARATOR + nonce + SEPARATOR + user_access
             return response, None
         except Exception as err:
             return "An error occurred while reading file", err
     elif command == "set":
         try:
-            path = user_command.split(SEPARATOR)[1]
-            encrypted_value = user_command.split(SEPARATOR)[2]
-            enc_key = user_command.split(SEPARATOR)[3]
-            tag = user_command.split(SEPARATOR)[4]
-            nonce = user_command.split(SEPARATOR)[5]
+            ucsplitted = user_command.split(SEPARATOR)
+            dest_user, path = server_utils.destruct_path(ucsplitted[1])
+            encrypted_value = ucsplitted[2]
+            enc_key = ucsplitted[3]
+            tag = ucsplitted[4]
+            nonce = ucsplitted[5]
 
-            file_tree = get_user_file_tree(username)
+            file_tree = get_user_file_tree(dest_user)
             try:
                 ft = locate_path(file_tree, path)
                 file_name = ft['fs_file_name']
@@ -186,15 +190,16 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             file_to_write.write_text(encrypted_value)
             # TODO check permission
             set_file(file_tree, path, file_name, enc_key, tag, nonce)
-            store_user_file_tree(username, file_tree)
+            store_user_file_tree(dest_user, file_tree)
             return None, None
         except Exception as err:
             return "An error occurred while setting text of the file", err
     elif command == "cd":
         try:
-            path = user_command.split(" ")[1]
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            if dest_user != username:
+                return "Access denied", "Can not cd other users directories"
             file_tree = get_user_file_tree(username)
-            # TODO check permission
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
@@ -206,8 +211,8 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while cd", err
     elif command == "ls":
         try:
-            path = user_command.split(" ")[1]
-            file_tree = get_user_file_tree(username)
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            file_tree = get_user_file_tree(dest_user)
             # TODO check permission
             try:
                 ft = locate_path(file_tree, path)
@@ -220,8 +225,9 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while ls", err
     elif command == "rm":
         try:
-            path = user_command.split(" ")[-1]
-            file_tree = get_user_file_tree(username)
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            file_tree = get_user_file_tree(dest_user)
+            # TODO: Check permission
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
@@ -235,7 +241,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 except Exception as err:
                     r, e = f"File {x['fs_file_name']} is also removed by enemy", err
             remove_subtree(file_tree, path)
-            store_user_file_tree(username, file_tree)
+            store_user_file_tree(dest_user, file_tree)
             return r, e
         except Exception as err:
             return "An error occurred while removing", err
@@ -259,22 +265,23 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     elif command == "share":
         try:
             target_user = user_command.split(SEPARATOR)[1]
-            path = user_command.split(SEPARATOR)[2]
-            user_access = user_command.split(SEPARATOR)[3]
+            our_user, path = server_utils.destruct_path(user_command.split(SEPARATOR)[2])
+            permissions = user_command.split(SEPARATOR)[3]
             enc_key = user_command.split(SEPARATOR)[4]
-
+            if our_user != username:
+                return "Access denied", "You can not share other users files"
             file_tree = get_user_file_tree(username)
-            target_file_tree = get_user_file_tree(target_user)
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
                 return "An error occurred while sharing file", "File not found"
             if ft['type'] == 'folder':
                 return "An error occurred while sharing file", "Sharing folders is not possible"
-            ft['enc_key'] = enc_key  # TODO We should add target user with its enk_key to file metadata
-            ft['user_access'] = user_access  # TODO We should add target user with its user_access to file metadata
-            insert_subtree(target_file_tree, path.replace("~", f"{username}"), ft)
-            store_user_file_tree(target_user, target_file_tree)
+            ft['user_access'][target_user] = {
+                "permissions": permissions,
+                "enc_key": enc_key, 
+            }
+            store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
             return "An error occurred while sharing", err

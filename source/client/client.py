@@ -191,7 +191,7 @@ def handle_client_commands(client):
                 print(response)
                 print(err)
             else:
-                client.current_path = path
+                client.current_path = path[len(client.username)+1:]
         elif command == "ls":
             if len(user_command.split(" ")) > 2:
                 print("command ls gets only 1 argument")

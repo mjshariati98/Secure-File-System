@@ -113,7 +113,11 @@ def generate_random_symmetric_key():
 
 
 def path_with_respect_to_cd(client, path):
+    if ":" in path:
+        user, path = path.split(":")
+        path = os.path.normpath(path)
+        return f"{user}:{path}"
     if not path.startswith("/") and not path.startswith("~"):
-        return os.path.normpath(os.path.join(client.current_path, path))
+        return f"{client.username}:{os.path.normpath(os.path.join(client.current_path, path))}"
     else:
-        return os.path.normpath(path)
+        return f"{client.username}:{os.path.normpath(path)}"
