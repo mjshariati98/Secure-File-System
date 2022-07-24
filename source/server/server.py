@@ -150,6 +150,16 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return None, None
         except Exception as err:
             return "An error occurred while creating new directory", err
+    elif command == "exists":
+        dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+        if username != dest_user:
+            return "Access denied", "You can't do this operation"
+        file_tree = get_user_file_tree(dest_user)
+        try:
+            locate_path(file_tree, path)
+            return True, None
+        except IndexError:
+            return False, None
     elif command == "get":
         try:
             dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
@@ -192,7 +202,8 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 file_name = ft['fs_file_name']
             except IndexError:  # file not exist
                 if dest_user != username:
-                    return "Access denied", "Can not create file for other users"
+                    # Don't expose more data
+                    return "Access denied", "You can't do this operation"
                 file_name = os.urandom(40).hex()
             file_to_write = Path(os.path.join(DATA_PATH, file_name))
             file_to_write.write_text(encrypted_value)
@@ -204,6 +215,9 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             store_user_file_tree(dest_user, file_tree)
             return None, None
         except Exception as err:
+            if dest_user != username:
+                # Don't return raw error, because attacker can find out list of files with that
+                return "Access denied", "You can't do this operation"
             return "An error occurred while setting text of the file", err
     elif command == "cd":
         try:

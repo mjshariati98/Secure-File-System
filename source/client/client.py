@@ -195,6 +195,16 @@ def handle_client_commands(client):
                 print("command touch gets only 1 argument")
                 continue
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
+            final_command = f"exists {path}"
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+                continue
+            if response:
+                print("Can not touch existing file")
+                continue
             response, err = write_file(client, path, "")
             if err is not None:
                 print(response)
@@ -247,6 +257,16 @@ def handle_client_commands(client):
                 continue
             user_command_parts[-1] = client_utils.path_with_respect_to_cd(client, user_command_parts[-1])
             user_command_parts[-2] = client_utils.path_with_respect_to_cd(client, user_command_parts[-2])
+            final_command = f"exists {user_command_parts[-1]}"
+            encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
+            response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
+            if err is not None:
+                print(response)
+                print(err)
+                continue
+            if response:
+                print("mv can not override files")
+                continue
             final_command = " ".join(user_command_parts)
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)
             response, err = server.api.user_command(client.username, encrypted_command, nonce, tag)
