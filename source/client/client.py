@@ -160,6 +160,7 @@ def handle_generate_key_pair():
         if user_input == 'exit':
             raise SystemExit
         else:
+            os.makedirs(user_input, exist_ok=True)
             prv_key, pub_key = client_utils.generate_RSA_key_pair()
             prv_key_path, pub_key_path = client_utils.save_key_pair(prv_key, pub_key, path=user_input)
             print("Private key generated in " + prv_key_path)
