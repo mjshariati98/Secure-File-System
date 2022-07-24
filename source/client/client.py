@@ -1,6 +1,7 @@
 import sys
 import os
 import base64
+import pwinput
 
 sys.path.append("..")
 sys.path.append("../server")
@@ -46,7 +47,7 @@ def main():
 
 def handle_sign_in(server_pub_key):
     username = input("Enter your username: ")
-    password = input("Enter your password: ")
+    password = pwinput.pwinput("Enter your password: ")
 
     # Generate session key and encrypt password with it
     session_key = client_utils.generate_random_symmetric_key()
@@ -116,7 +117,7 @@ def handle_sign_up(server_pub_key):
     client = Client(client_keys)
 
     username = input("Enter your username: ")
-    password = input("Enter your password: ")
+    password = pwinput.pwinput("Enter your password: ")
     name = input("Enter your name: ")
 
     client.username = username
