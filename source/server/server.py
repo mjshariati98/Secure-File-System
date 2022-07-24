@@ -256,8 +256,8 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while removing", err
     elif command == "mv":
         try:
-            from_path = user_command.split(" ")[-2]
-            to_path = user_command.split(" ")[-1]
+            dest_user, from_path = server_utils.destruct_path(user_command.split(" ")[-2])
+            _, to_path = server_utils.destruct_path(user_command.split(" ")[-1])
             file_tree = get_user_file_tree(username)
             try:
                 ft = locate_path(file_tree, from_path)
