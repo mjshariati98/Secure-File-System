@@ -221,6 +221,9 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     elif command == "ls":
         try:
             dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            if dest_user != username:
+                return "Access denied", "You can't list directories for other users"
+
             file_tree = get_user_file_tree(dest_user)
             # TODO check permission
             try:
