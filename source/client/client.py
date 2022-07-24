@@ -191,7 +191,7 @@ def handle_client_commands(client):
                 print(response)
                 print(err)
             else:
-                client.current_path = path[len(client.username)+1:]
+                client.current_path = path[len(client.username) + 1:]
         elif command == "ls":
             if len(user_command.split(" ")) > 2:
                 print("command ls gets only 1 argument")
@@ -295,9 +295,9 @@ def handle_client_commands(client):
                 new_value = edit_file_in_vim(value, mode=user_access)
                 if user_access == "owner" or user_access == "rw":
                     response, err = write_file(client, path, new_value, enc_key=enc_key)
-                if err is not None:
-                    print(response)
-                    print(err)
+                    if err is not None:
+                        print(response)
+                        print(err)
         else:
             print("command " + command + " not found")
 

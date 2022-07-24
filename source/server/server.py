@@ -173,12 +173,12 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while reading file", err
     elif command == "set":
         try:
-            ucsplitted = user_command.split(SEPARATOR)
-            dest_user, path = server_utils.destruct_path(ucsplitted[1])
-            encrypted_value = ucsplitted[2]
-            enc_key = ucsplitted[3]
-            tag = ucsplitted[4]
-            nonce = ucsplitted[5]
+            user_command_parts = user_command.split(SEPARATOR)
+            dest_user, path = server_utils.destruct_path(user_command_parts[1])
+            encrypted_value = user_command_parts[2]
+            enc_key = user_command_parts[3]
+            tag = user_command_parts[4]
+            nonce = user_command_parts[5]
 
             file_tree = get_user_file_tree(dest_user)
             try:
@@ -189,7 +189,10 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             file_to_write = Path(os.path.join(DATA_PATH, file_name))
             file_to_write.write_text(encrypted_value)
             # TODO check permission
-            set_file(file_tree, path, file_name, enc_key, tag, nonce)
+            if dest_user != username:
+                set_shared_file(file_tree, path, username, enc_key, tag, nonce)
+            else:
+                set_file(file_tree, path, file_name, enc_key, tag, nonce)
             store_user_file_tree(dest_user, file_tree)
             return None, None
         except Exception as err:
@@ -279,7 +282,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 return "An error occurred while sharing file", "Sharing folders is not possible"
             ft['user_access'][target_user] = {
                 "permissions": permissions,
-                "enc_key": enc_key, 
+                "enc_key": enc_key,
             }
             store_user_file_tree(username, file_tree)
             return None, None

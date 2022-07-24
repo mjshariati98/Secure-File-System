@@ -113,6 +113,23 @@ def set_file(file_tree, path, fs_file_name, enc_key, tag, nonce):
         file_tree_list[0]['nonce'] = nonce
 
 
+def set_shared_file(file_tree, path, user, enc_key, tag, nonce):
+    path_parts = path_to_parts(path)
+    name = path_parts[-1]
+    path_parts = path_parts[:-1]
+    for p in path_parts:
+        if p == "":
+            continue
+        if file_tree['type'] != 'folder':
+            raise Exception(f"{file_tree['name']} is not a folder")
+        file_tree_list = [x for x in file_tree['files'] if x['name'] == p]
+        file_tree = file_tree_list[0]
+    file_tree_list = [x for x in file_tree['files'] if x['name'] == name]
+    file_tree_list[0]['user_access'][user]['enc_key'] = enc_key
+    file_tree_list[0]['tag'] = tag
+    file_tree_list[0]['nonce'] = nonce
+
+
 def create_directory(file_tree, path):
     path_parts = path_to_parts(path)
     for p in path_parts:
