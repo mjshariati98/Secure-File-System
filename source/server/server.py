@@ -135,7 +135,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
     user_session_key = get_user_session_key(username)
     user_command = server_utils.symmetric_decrypt(user_session_key, nonce, tag, encrypted_command)
     if user_command is None:
-        return None, "Command corrupted"
+        return None, "Command corrupted - Unable to decrypt with session key"
     user_command = user_command.decode()
 
     command = user_command.split(" ")[0]
