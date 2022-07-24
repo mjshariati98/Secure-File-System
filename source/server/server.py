@@ -191,6 +191,8 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 ft = locate_path(file_tree, path)
                 file_name = ft['fs_file_name']
             except IndexError:  # file not exist
+                if dest_user != username:
+                    return "Access denied", "Can not create file for other users"
                 file_name = os.urandom(40).hex()
             file_to_write = Path(os.path.join(DATA_PATH, file_name))
             file_to_write.write_text(encrypted_value)
