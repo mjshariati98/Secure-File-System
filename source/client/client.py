@@ -13,6 +13,7 @@ import server.api
 SERVER_PUB_KEY_PATH = "../server/pub.key"  # It should be in the client side but we do this to be simpler.
 
 SEPARATOR = "///Xvc6$8Jf_SEPARATOR_X90kNb%2a///"
+ALL_USERS = "__all_users__"
 
 
 def main():
@@ -276,10 +277,13 @@ def handle_client_commands(client):
                 print(err)
         elif command == "revoke":
             user_command_parts = user_command.split(" ")
-            if len(user_command_parts) != 3:
-                print("command revoke gets 2 arguments")
+            if len(user_command_parts) < 2 or len(user_command_parts) > 3:
+                print("bad arguments for share")
+                print("example: revoke <file> <user> for revoking access from specific user or revoke <file> for revoking access for all users")
             path = client_utils.path_with_respect_to_cd(client, user_command_parts[1])
-            target_user = user_command_parts[2]
+            target_user = ALL_USERS
+            if len(user_command_parts) == 3:
+                target_user = user_command_parts[2]
 
             final_command = f"revoke {path} {target_user}"
             encrypted_command, nonce, tag = client_utils.symmetric_encrypt(client.session_key, final_command)

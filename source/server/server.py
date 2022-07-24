@@ -13,6 +13,9 @@ PUB_KEY_PATH = os.path.join(DIR_NAME, 'pub.key')
 DATA_PATH = os.path.join(DIR_NAME, 'data')
 
 SEPARATOR = "///Xvc6$8Jf_SEPARATOR_X90kNb%2a///"
+ALL_USERS = "__all_users__"
+
+RESERVED_USERNAMES = [ALL_USERS]
 
 
 def initialize():
@@ -50,6 +53,9 @@ def create_db_tables():
 
 def sign_up(name, username, encrypted_password, nonce, tag, password_signature, encrypted_session_key, user_pub_key):
     try:
+        if username in RESERVED_USERNAMES:
+            return False, f"{username} is a reserved username"
+
         server_prv_key = server_utils.load_key(PRV_KEY_PATH)
 
         session_key = server_utils.asymmetric_decrypt(server_prv_key, encrypted_session_key)
@@ -289,8 +295,11 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         except Exception as err:
             return "An error occurred while sharing", err
     elif command == "revoke":
-        path = user_command.split(" ")[1]
+        dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
         target_user = user_command.split(" ")[2]
+
+        if dest_user != username:
+            return "Access denied", "Only owner of a file can revoke it"
 
         file_tree = get_user_file_tree(username)
         try:
@@ -300,11 +309,17 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         if ft['type'] == 'folder':
             return "An error occurred while revoking file", "Sharing and revoking folders are not possible"
 
-        # TODO check this request comes from owner of file
-        # TODO check file is shared with the target user
-        # TODO remove user from file's share filed in metadata
-
-        return "Access of " + target_user + " from file " + path + " revoked successfully", None
+        if target_user == ALL_USERS:
+            ft['user_access'] = {}
+            store_user_file_tree(username, file_tree)
+            return "Access of all users from file " + path + " revoked successfully", None
+        else:
+            if target_user in ft['user_access']:
+                del ft['user_access'][target_user]
+                store_user_file_tree(username, file_tree)
+                return "Access of " + target_user + " from file " + path + " revoked successfully", None
+            else:
+                return "An error occurred while revoking file", "User " + target_user + " didn't have access to this file"
     elif command == "pubkey":
         try:
             target_user = user_command.split(" ")[1]
