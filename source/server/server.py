@@ -234,7 +234,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             return "An error occurred while ls", err
     elif command == "rm":
         try:
-            dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
+            dest_user, path = server_utils.destruct_path(user_command.split(" ")[-1])
             file_tree = get_user_file_tree(dest_user)
             # TODO: Check permission
             try:
