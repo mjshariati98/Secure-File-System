@@ -182,7 +182,7 @@ def handle_client_commands(client):
                 print(err)
         elif command == "cd":
             if len(user_command.split(" ")) != 2:
-                print("command cd gets only 1 argument")
+                print("command cd gets 1 argument")
                 continue
             path = client_utils.path_with_respect_to_cd(client, user_command.split(" ")[1])
             final_command = f"cd {path}"

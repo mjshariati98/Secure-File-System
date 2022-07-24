@@ -207,7 +207,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         try:
             dest_user, path = server_utils.destruct_path(user_command.split(" ")[1])
             if dest_user != username:
-                return "Access denied", "Can not cd other users directories"
+                return "Access denied", "Cannot change directory to other users' directories"
             file_tree = get_user_file_tree(username)
             try:
                 ft = locate_path(file_tree, path)
