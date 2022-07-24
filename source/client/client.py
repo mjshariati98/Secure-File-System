@@ -61,7 +61,12 @@ def handle_sign_in(server_pub_key):
         print(err)
         return None
 
-    client_keys = handle_load_key_pair()
+    client_keys = None
+    while client_keys is None:
+        client_keys, err = handle_load_key_pair()
+        if client_keys is None:
+            print("An error occurred while loading keys")
+            print(err)
 
     # Check this key is the same key that the user was signed up with
     text = "CHECK KEY".encode('utf-8')
@@ -92,11 +97,19 @@ def handle_sign_up(server_pub_key):
         if user_input == 'exit':
             raise SystemExit
         elif user_input == '1':
-            valid_input = True
-            client_keys = handle_load_key_pair()
+            client_keys, err = handle_load_key_pair()
+            if client_keys is None:
+                print("An error occurred while loading keys")
+                print(err)
+            else:
+                valid_input = True
         elif user_input == '2':
-            valid_input = True
-            client_keys = handle_generate_key_pair()
+            client_keys, err = handle_generate_key_pair()
+            if client_keys is None:
+                print("An error occurred while creating keys")
+                print(err)
+            else:
+                valid_input = True
         else:
             print("Invalid input. Try again...")
 
@@ -128,26 +141,32 @@ def handle_sign_up(server_pub_key):
 
 
 def handle_load_key_pair():
-    user_input = input("Enter you private key path to load (default is `./prv.key`): ")
-    if user_input == "":
-        user_input = "./prv.key"
-    prv_key = client_utils.load_key(user_input)
-    pub_key = client_utils.get_pub_key(prv_key)
-    client_keys = ClientKeys(prv_key, pub_key)
-    return client_keys
+    try:
+        user_input = input("Enter you private key path to load (default is `./prv.key`): ")
+        if user_input == "":
+            user_input = "./prv.key"
+        prv_key = client_utils.load_key(user_input)
+        pub_key = client_utils.get_pub_key(prv_key)
+        client_keys = ClientKeys(prv_key, pub_key)
+        return client_keys, None
+    except Exception as err:
+        return None, err
 
 
 def handle_generate_key_pair():
-    user_input = input("Enter a directory path to save your private and public keys (`.` for current directory): ")
-    if user_input == 'exit':
-        raise SystemExit
-    else:
-        prv_key, pub_key = client_utils.generate_RSA_key_pair()
-        prv_key_path, pub_key_path = client_utils.save_key_pair(prv_key, pub_key, path=user_input)
-        print("Private key generated in " + prv_key_path)
-        print("Public key generated in " + pub_key_path)
-        client_keys = ClientKeys(prv_key, pub_key)
-        return client_keys
+    try:
+        user_input = input("Enter a directory path to save your private and public keys (`.` for current directory): ")
+        if user_input == 'exit':
+            raise SystemExit
+        else:
+            prv_key, pub_key = client_utils.generate_RSA_key_pair()
+            prv_key_path, pub_key_path = client_utils.save_key_pair(prv_key, pub_key, path=user_input)
+            print("Private key generated in " + prv_key_path)
+            print("Public key generated in " + pub_key_path)
+            client_keys = ClientKeys(prv_key, pub_key)
+            return client_keys, None
+    except Exception as err:
+        return None, err
 
 
 def handle_client_commands(client):
