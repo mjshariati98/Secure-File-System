@@ -262,15 +262,15 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             try:
                 ft = locate_path(file_tree, from_path)
             except IndexError:
-                return "An error occurred while removing file", "File not found"
+                return "An error occurred while moving file", "File not found"
             if ft['type'] == 'folder' and user_command.split(" ")[-3] != "-r":
-                return "An error occurred while removing file", "Folder need -r"
+                return "An error occurred while moving file", "Folder need -r"
             remove_subtree(file_tree, from_path)
             insert_subtree(file_tree, to_path, ft)
             store_user_file_tree(username, file_tree)
             return None, None
         except Exception as err:
-            return "An error occurred while removing", err
+            return "An error occurred while moving file", err
     elif command == "share":
         try:
             target_user = user_command.split(SEPARATOR)[1]
