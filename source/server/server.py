@@ -225,7 +225,6 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 return "Access denied", "You can't list directories for other users"
 
             file_tree = get_user_file_tree(dest_user)
-            # TODO check permission
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
@@ -239,7 +238,10 @@ def exec_user_command(username, encrypted_command, nonce, tag):
         try:
             dest_user, path = server_utils.destruct_path(user_command.split(" ")[-1])
             file_tree = get_user_file_tree(dest_user)
-            # TODO: Check permission
+
+            if dest_user != username:
+                return "Access denied", "You can't remove files of other users"
+
             try:
                 ft = locate_path(file_tree, path)
             except IndexError:
