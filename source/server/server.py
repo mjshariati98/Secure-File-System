@@ -180,7 +180,7 @@ def exec_user_command(username, encrypted_command, nonce, tag):
             tag = ft['tag']
             nonce = ft['nonce']
             user_access = "owner"
-            if dest_user != username:  # TODO
+            if dest_user != username:
                 user_access = ft['user_access'][username]['permissions']
                 enc_key = ft['user_access'][username]['enc_key']
             response = encrypted_value + SEPARATOR + enc_key + SEPARATOR + tag + SEPARATOR + nonce + SEPARATOR + user_access
@@ -207,7 +207,6 @@ def exec_user_command(username, encrypted_command, nonce, tag):
                 file_name = os.urandom(40).hex()
             file_to_write = Path(os.path.join(DATA_PATH, file_name))
             file_to_write.write_text(encrypted_value)
-            # TODO check permission
             if dest_user != username:
                 set_shared_file(file_tree, path, username, enc_key, tag, nonce)
             else:
